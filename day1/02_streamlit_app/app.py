@@ -11,7 +11,7 @@ from config import MODEL_NAME
 from huggingface_hub import HfFolder
 
 # --- アプリケーション設定 ---
-st.set_page_config(page_title="Gemma Chatbot", layout="wide")
+st.set_page_config(page_title="Phi-2 Chatbot", layout="wide")
 
 # --- 初期化処理 ---
 # NLTKデータのダウンロード（初回起動時など）
@@ -34,7 +34,7 @@ def load_model():
         pipe = pipeline(
             "text-generation",
             model=MODEL_NAME,
-            model_kwargs={"torch_dtype": torch.bfloat16},
+            model_kwargs={"torch_dtype": torch.float16 if device == "cuda" else torch.float32},
             device=device
         )
         st.success(f"モデル '{MODEL_NAME}' の読み込みに成功しました。")
@@ -46,8 +46,8 @@ def load_model():
 pipe = llm.load_model()
 
 # --- Streamlit アプリケーション ---
-st.title("🤖 Gemma 2 Chatbot with Feedback")
-st.write("Gemmaモデルを使用したチャットボットです。回答に対してフィードバックを行えます。")
+st.title("🤖 Phi-2 Chatbot with Feedback")
+st.write("Phi-2モデルを使用したチャットボットです。回答に対してフィードバックを行えます。")
 st.markdown("---")
 
 # --- サイドバー ---
@@ -78,4 +78,45 @@ elif st.session_state.page == "サンプルデータ管理":
 
 # --- フッターなど（任意） ---
 st.sidebar.markdown("---")
-st.sidebar.info("開発者: [Your Name]")
+
+# 開発者名の管理
+if 'developer_name' not in st.session_state:
+    st.session_state.developer_name = ""
+    st.session_state.edit_mode = True
+elif 'edit_mode' not in st.session_state:
+    st.session_state.edit_mode = not bool(st.session_state.developer_name)
+
+# 編集モードの切り替え関数
+def toggle_edit_mode():
+    st.session_state.edit_mode = not st.session_state.edit_mode
+
+# 名前保存関数
+def save_name():
+    if st.session_state.dev_name_input:
+        st.session_state.developer_name = st.session_state.dev_name_input
+        st.session_state.edit_mode = False
+
+# 編集モードの場合は入力フィールドを表示
+if st.session_state.edit_mode:
+    with st.sidebar.container():
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.text_input(
+                "開発者名:",
+                value=st.session_state.developer_name,
+                key="dev_name_input",
+                on_change=save_name
+            )
+        with col2:
+            st.button("保存", on_click=save_name, use_container_width=True)
+    
+    if not st.session_state.developer_name:
+        st.sidebar.info("👆 開発者名を入力してください")
+# 表示モードの場合は名前を表示
+else:
+    with st.sidebar.container():
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.info(f"👨‍💻 開発者: {st.session_state.developer_name}")
+        with col2:
+            st.button("編集", on_click=toggle_edit_mode, use_container_width=True)
